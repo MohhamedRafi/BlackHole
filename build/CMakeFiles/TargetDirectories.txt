@@ -1,0 +1,7 @@
+/home/mohha/projects/blackhole_project/build/CMakeFiles/blackhole.dir
+/home/mohha/projects/blackhole_project/build/CMakeFiles/edit_cache.dir
+/home/mohha/projects/blackhole_project/build/CMakeFiles/rebuild_cache.dir
+/home/mohha/projects/blackhole_project/build/_deps/glad-build/CMakeFiles/glad-generate-files.dir
+/home/mohha/projects/blackhole_project/build/_deps/glad-build/CMakeFiles/glad.dir
+/home/mohha/projects/blackhole_project/build/_deps/glad-build/CMakeFiles/edit_cache.dir
+/home/mohha/projects/blackhole_project/build/_deps/glad-build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,58 @@
+# ===== Build Artifacts =====
+/build/
+/out/
+/bin/
+/lib/
+/obj/
+/dist/
+/CMakeFiles/
+/CMakeCache.txt
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# ===== IDEs & Editors =====
+# VS Code
+.vscode/
+.vscode/*
+# CLion / JetBrains
+.idea/
+# Xcode
+xcuserdata/
+*.xcuserstate
+
+# ===== OS / Environment =====
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+desktop.ini
+
+# ===== Logs / Temp =====
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ===== Compiled binaries =====
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+
+# ===== Python (if you use helper scripts) =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+.envrc
+
+# ===== Misc =====
+# Ignore generated GLAD files if you want to fetch them dynamically
+_deps/
