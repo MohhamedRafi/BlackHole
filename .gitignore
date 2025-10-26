@@ -1,15 +1,16 @@
 # ===== Build Artifacts =====
-/build/
-/out/
-/bin/
-/lib/
-/obj/
-/dist/
-/CMakeFiles/
-/CMakeCache.txt
+build/
+out/
+bin/
+lib/
+obj/
+dist/
+CMakeFiles/
+CMakeCache.txt
 Makefile
 cmake_install.cmake
 compile_commands.json
+
 
 # ===== IDEs & Editors =====
 # VS Code
