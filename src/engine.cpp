@@ -5,7 +5,7 @@ bool Engine::on_enter(EngineState s) {
   switch (s) {
     case EngineState::Boot:      std::cout << "[enter] Boot\n"; return true;
     case EngineState::InitGL:    {
-      std::cout << "[enter] InitGL\n"; /* create window, GL ctx */ return true;
+      std::cout << "[enter] InitGL\n"; /* create window, GL ctx */ 
 
       if (!glfwInit()) {
         std::cout << "glfwIniti failed\n";
@@ -32,13 +32,15 @@ bool Engine::on_enter(EngineState s) {
       }
 
       glViewport(0, 0, width, height);
+      glfwShowWindow(window);
+
       return true;
     };
     case EngineState::Loading:   std::cout << "[enter] Loading\n"; /* load assets */ return true;
     case EngineState::Running:   std::cout << "[enter] Running\n"; return true;
     case EngineState::Paused:    std::cout << "[enter] Paused\n"; return true;
     case EngineState::Suspended: std::cout << "[enter] Suspended\n"; return true;
-    case EngineState::ShuttingDown: std::cout << "[enter] ShuttingDown\n"; return true;
+    case EngineState::ShuttingDown: std::cout << "[enter] Shutting Down\n"; return true;
   }
 
   return true;
@@ -68,9 +70,9 @@ void Engine::process_events() {
     WindowEvent e = events.front(); events.pop(); // grap the first event, and remove 
     switch (e.type) {
       case WindowEvent::Close : running = false; break; 
-      case WindowEvent::Resize : width = e.a; height = e.b; /* glViewport */ break;
-      case WindowEvent::FocusLost : if (state == EngineState::Running) go(EngineState::Suspended);
-      case WindowEvent::FocusGained : if (state == EngineState::Suspended) go(EngineState::Running); 
+      case WindowEvent::Resize :  width = e.a; height = e.b; /* glViewport */ break; 
+      case WindowEvent::FocusLost : if (state == EngineState::Running) go(EngineState::Suspended); break; 
+      case WindowEvent::FocusGained : if (state == EngineState::Suspended) go(EngineState::Running); break; 
       case WindowEvent::KeyDown : {
         if (e.a == 256 /*Esc*/) go(EngineState::ShuttingDown); 
         if (e.a == 'P') { 
@@ -97,5 +99,8 @@ void Engine::update_variable(double dt) {
 }
 
 void Engine::render() {
-
+  if(!window) return; 
+  glClearColor(0.1f, 0.12f, 0.2f, 1.0f); 
+  glClear(GL_COLOR_BUFFER_BIT); 
+  glfwSwapBuffers(window);
 }

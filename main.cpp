@@ -19,9 +19,10 @@ int main() {
 
     E.time_prev = now_seconds();
 
-    while (E.running) {
+    while (E.running && !glfwWindowShouldClose(E.window)) {
         // platform layer should feed E with events (afterwards process)
 
+        glfwPollEvents();
         E.process_events();
 
         /**
@@ -35,11 +36,11 @@ int main() {
         if (frame > 0.25) frame = 0.25; // clamp for hitches 
 
         E.time_prev = E.time_now;
-        E.accumlator += frame; 
+        E.accumulator  += frame; 
 
-        while (E.accumlator >= Engine::DT) { // while we have accumulated time left
+        while (E.accumulator  >= Engine::DT) { // while we have accumulated time left
             E.update_fixed(Engine::DT); // updated simulation by one tick
-            E.accumlator -= Engine::DT; // consume that much real time
+            E.accumulator  -= Engine::DT; // consume that much real time
         }
 
         E.update_variable(frame); // this is for camera smoothing or lerps.

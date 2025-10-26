@@ -24,7 +24,7 @@ struct Engine {
   EngineState state = EngineState::Boot;
   GLFWwindow* window = nullptr;
 
-  double time_now = 0.0, time_prev = 0.0, accumlator = 0.0;
+  double time_now = 0.0, time_prev = 0.0, accumulator = 0.0;
   static constexpr double DT = 1.0 / 60.0;
 
   std::queue<WindowEvent> events;
