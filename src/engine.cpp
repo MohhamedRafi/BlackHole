@@ -20,6 +20,8 @@ bool Engine::on_enter(EngineState s) {
       window = glfwCreateWindow(width, height, "BlackHole", nullptr, nullptr); 
       if (!window) { 
         std::cout<< "glfwCreateWindow failed!\n";
+        glfwTerminate();
+        return false;
       }
 
       glfwMakeContextCurrent(window);
@@ -36,11 +38,35 @@ bool Engine::on_enter(EngineState s) {
 
       return true;
     };
-    case EngineState::Loading:   std::cout << "[enter] Loading\n"; /* load assets */ return true;
+    
+    case EngineState::Loading:   {
+      std::cout << "[enter] Loading\n";
+
+      if(!renderer.init_triangle(shaders)) {
+        std::cout << "Renderer init triangle failed!\n"; 
+        return false; 
+      }
+      return true;
+    };
+
     case EngineState::Running:   std::cout << "[enter] Running\n"; return true;
     case EngineState::Paused:    std::cout << "[enter] Paused\n"; return true;
     case EngineState::Suspended: std::cout << "[enter] Suspended\n"; return true;
-    case EngineState::ShuttingDown: std::cout << "[enter] Shutting Down\n"; return true;
+    case EngineState::ShuttingDown: {
+      std::cout << "[enter] Shutting Down\n"; 
+      
+      renderer.shutdown();
+      shaders.shutdown();
+
+      if(window) {
+        glfwDestroyWindow(window); 
+        window = nullptr;
+      }
+      glfwTerminate();
+
+      break;
+    };
+
   }
 
   return true;
@@ -70,7 +96,7 @@ void Engine::process_events() {
     WindowEvent e = events.front(); events.pop(); // grap the first event, and remove 
     switch (e.type) {
       case WindowEvent::Close : running = false; break; 
-      case WindowEvent::Resize :  width = e.a; height = e.b; /* glViewport */ break; 
+      case WindowEvent::Resize :  width = e.a; height = e.b;  glViewport(0,0,width,height); break; 
       case WindowEvent::FocusLost : if (state == EngineState::Running) go(EngineState::Suspended); break; 
       case WindowEvent::FocusGained : if (state == EngineState::Suspended) go(EngineState::Running); break; 
       case WindowEvent::KeyDown : {
@@ -92,6 +118,10 @@ void Engine::update_fixed(double dt) {
   if (state != EngineState::Running) return;
 
   // ... simulate .. 
+
+  angle += angular_velocity * static_cast<float>(dt);
+  if (angle > 3.14159265f) angle -= 6.28318531f;
+  if (angle < -3.14159265f) angle += 6.28318531f;
 }
 
 void Engine::update_variable(double dt) {
@@ -102,5 +132,12 @@ void Engine::render() {
   if(!window) return; 
   glClearColor(0.1f, 0.12f, 0.2f, 1.0f); 
   glClear(GL_COLOR_BUFFER_BIT); 
+
+  if(state == EngineState::Running) {
+
+    renderer.draw(angle);
+
+  }
+
   glfwSwapBuffers(window);
 }
