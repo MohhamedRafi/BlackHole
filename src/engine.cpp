@@ -183,7 +183,7 @@ void Engine::render() {
   glClear(GL_COLOR_BUFFER_BIT); 
 
   if(state == EngineState::Running) {
-    camera.aspect == static_cast<float> (width) / static_cast<float> (height);
+    camera.aspect = static_cast<float> (width) / static_cast<float> (height);
     renderer.draw(angle, camera.getViewProj());
   }
 

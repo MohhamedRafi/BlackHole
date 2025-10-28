@@ -41,4 +41,6 @@ const ShaderProgram& ShaderLibrary::get_flat_color() {
         const ShaderProgram& fp = get_from_files("flat", "shaders/flat.vert", "shaders/flat.frag");
         if(fp.id) return fp;
     }
+
+    return ShaderProgram();
 }
