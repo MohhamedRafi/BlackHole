@@ -1,4 +1,6 @@
 #include "shader.h"
+#include "asset_loader.h"
+#include <string>
 
 
 GLuint compile_shader(GLenum type, const char* src, std::string* err) {
@@ -29,4 +31,13 @@ GLuint link_program(GLuint vs, GLuint fs, std::string* err) {
         return 0;
     }
     return p;
+}
+
+GLuint compile_shader_file(GLenum type, const char* filepath_rel, std::string* err) {
+    std::string src; 
+    if(!AssetLoader::instance().read_text(filepath_rel, src)) {
+        if (err) *err = std::string("Could not read life: ") + filepath_rel;
+        return 0;
+    }
+    return compile_shader(type, src.c_str(), err);
 }

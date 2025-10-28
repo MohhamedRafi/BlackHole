@@ -49,16 +49,17 @@ void Renderer::shutdown() {
   if (vao) { glDeleteVertexArrays(1, &vao); vao = 0;} 
 }
 
-void Renderer::draw(float angle_radians) {
+void Renderer::draw(float angle_radians, const glm::mat4& VP) {
     if (!prog || !vao) return;
      glUseProgram(prog);
-    // Build & upload model rotation about Z
+
     glm::mat4 M(1.0f);
     M = glm::rotate(M, angle_radians, glm::vec3(0.0f, 0.0f, 1.0f));
+    const glm::mat4 MVP = VP * M;
     if (uTransformLoc >= 0)
-        glUniformMatrix4fv(uTransformLoc, 1, GL_FALSE, glm::value_ptr(M));
+        glUniformMatrix4fv(uTransformLoc, 1, GL_FALSE, glm::value_ptr(MVP));
 
-    glUseProgram(prog);
+        
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);

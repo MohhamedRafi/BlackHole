@@ -8,6 +8,7 @@
 
 #include "renderer.h"
 #include "shader_library.h"
+#include "camera.h"
 
 
 struct WindowEvent {
@@ -29,6 +30,14 @@ struct Engine {
 
   ShaderLibrary shaders; 
   Renderer renderer;
+  Camera camera;
+
+  bool captureMouse = true;
+  bool firstMouse = true;
+  double lastMouseX = 0.0, lastMouseY = 0.0; 
+
+  void setup_input_callbacks();
+
 
   double time_now = 0.0, time_prev = 0.0, accumulator = 0.0;
   static constexpr double DT = 1.0 / 60.0;

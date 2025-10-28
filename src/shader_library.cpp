@@ -8,35 +8,37 @@ void ShaderLibrary::shutdown() {
     progs.clear();
 }
 
+const ShaderProgram& ShaderLibrary::get_from_files(const std::string& name, const std::string& vs_rel, const std::string& fs_rel) {
+    auto it = progs.find(name); 
+    if (it != progs.end()) return it->second;
+
+    std::string err; 
+    GLuint vs = compile_shader_file(GL_VERTEX_SHADER,   vs_rel.c_str(), &err);
+    if (!vs) std::fprintf(stderr, "[%s] VS file error: %s\n", name.c_str(), err.c_str());
+    GLuint fs = compile_shader_file(GL_FRAGMENT_SHADER, fs_rel.c_str(), &err);
+    if (!fs) std::fprintf(stderr, "[%s] FS file error: %s\n", name.c_str(), err.c_str());
+
+    GLuint prog = 0;
+    if (vs && fs) {
+        prog = link_program(vs, fs, &err); 
+        if (!prog) if (!vs) std::fprintf(stderr, "[%s] Link error: %s\n", name.c_str(), err.c_str());
+    } else {
+        if (vs) glDeleteShader(vs); 
+        if (fs) glDeleteShader(fs); 
+   }
+
+   ShaderProgram sp{prog};
+   auto [ins, _] = progs.emplace(name, sp);
+   return ins->second;
+}
+
 /* Flat Color Example */
-
-static const char* VS_FLAT = R"(#version 330 core
-layout(location=0) in vec2 aPos;
-layout(location=1) in vec3 aCol;
-out vec3 vCol;
-uniform mat4 uTransform;            // NEW
-void main(){
-    vCol = aCol;
-    gl_Position = uTransform * vec4(aPos, 0.0, 1.0);
-})";
-
-static const char* FS_FLAT = R"(#version 330 core
-in vec3 vCol; out vec4 fragColor;
-void main(){ fragColor = vec4(vCol, 1.0); })";
-
 const ShaderProgram& ShaderLibrary::get_flat_color() {
     auto it = progs.find("flat");
     if (it != progs.end()) return it->second;
-
-    std::string err;
-    GLuint vs = compile_shader(GL_VERTEX_SHADER, VS_FLAT, &err);
-    if (!vs) std::fprintf(stderr, "VS error: %s\n", err.c_str());
-    GLuint fs = compile_shader(GL_FRAGMENT_SHADER, FS_FLAT, &err);
-    if (!fs) std::fprintf(stderr, "FS error: %s\n", err.c_str());
-    GLuint prog = link_program(vs, fs, &err);
-    if (!prog) std::fprintf(stderr, "Link error: %s\n", err.c_str());
-
-    ShaderProgram sp{prog};
-    auto [ins, _] = progs.emplace("flat", sp);
-    return ins->second;
+    {
+        // find the files first
+        const ShaderProgram& fp = get_from_files("flat", "shaders/flat.vert", "shaders/flat.frag");
+        if(fp.id) return fp;
+    }
 }

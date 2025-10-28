@@ -27,6 +27,13 @@ bool Engine::on_enter(EngineState s) {
       glfwMakeContextCurrent(window);
       glfwSwapInterval(1); 
 
+      glfwSetWindowUserPointer(window, this); 
+      if(captureMouse) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); 
+    
+      } 
+      setup_input_callbacks();
+
 
       if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
           std::fprintf(stderr, "gladLoadGL failed\n");
@@ -46,6 +53,9 @@ bool Engine::on_enter(EngineState s) {
         std::cout << "Renderer init triangle failed!\n"; 
         return false; 
       }
+      
+      camera.updateVectors();
+
       return true;
     };
 
@@ -113,6 +123,30 @@ void Engine::process_events() {
   }
 }
 
+void Engine::setup_input_callbacks() {
+  glfwSetCursorPosCallback(window, [](GLFWwindow* win, double x, double y) {
+    auto* E = static_cast<Engine*>(glfwGetWindowUserPointer(win)); 
+    
+    if (!E || !E->captureMouse) return; 
+    if (E->firstMouse) {E->lastMouseX = x; E->lastMouseY = y; E->firstMouse = false; return; }
+    const float dx = static_cast<float>(x - E->lastMouseX);
+    const float dy = static_cast<float>(y - E->lastMouseY);
+    E->lastMouseX = x; E->lastMouseY = y; 
+
+    E->camera.processMouse(dx, dy);
+
+  });
+
+  // Window Resize -> keep aspect current
+  glfwSetFramebufferSizeCallback(window, [](GLFWwindow* win, int w, int h) {
+    auto* E = static_cast<Engine*>(glfwGetWindowUserPointer(win));
+    if (!E) return;
+    E->width = w; E->height = h;  
+    glViewport(0, 0, w, h);
+    E->camera.aspect = (h > 0) ? (float)w / (float) h : E->camera.aspect;
+  });
+}
+
 void Engine::update_fixed(double dt) {
   /* deterministic simulation steps */
   if (state != EngineState::Running) return;
@@ -125,7 +159,22 @@ void Engine::update_fixed(double dt) {
 }
 
 void Engine::update_variable(double dt) {
+  if (state != EngineState::Running) return;
 
+  // Handle WASD 
+  const bool w = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+  const bool s = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
+  const bool a = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
+  const bool d = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+
+  // speed boost with Shift
+  const bool boost = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+  const float saved = camera.moveSpeed;
+  if (boost) camera.moveSpeed *= 2.5f;
+
+  camera.processKeyboard(w, s, a, d, static_cast<float>(dt));
+
+  if (boost) camera.moveSpeed = saved;
 }
 
 void Engine::render() {
@@ -134,9 +183,8 @@ void Engine::render() {
   glClear(GL_COLOR_BUFFER_BIT); 
 
   if(state == EngineState::Running) {
-
-    renderer.draw(angle);
-
+    camera.aspect == static_cast<float> (width) / static_cast<float> (height);
+    renderer.draw(angle, camera.getViewProj());
   }
 
   glfwSwapBuffers(window);

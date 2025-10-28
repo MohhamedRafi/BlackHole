@@ -42,6 +42,12 @@ file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
 
 add_executable(blackhole ${APP_SOURCES})
 
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        ${CMAKE_CURRENT_BINARY_DIR}/assets
+)
+
 target_include_directories(blackhole PRIVATE
   ${GLFW3_INCLUDE_DIRS}
   ${GLM_INCLUDE_DIR}
