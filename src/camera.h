@@ -2,6 +2,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
+
 /**
  * =====================================================
  * Camera System
@@ -27,15 +30,15 @@ struct Camera {
   glm::vec3 position{0.0f, 0.0f, 0.0f};
   glm::vec3 front{0.0f, 0.0f, -1.0f};    // view direction (derived from yaw/pitch)
   glm::vec3 up{0.0f, 1.0f, 0.0f}; 
+  glm::vec3 right{1.0f, 0.0f, 0.0f};
 
   float fov = 45.0f; 
   float aspect = 16.0f/9.0f; 
   float nearPlane = 0.1f; 
   float farPlane = 100.0f; 
 
+  glm::quat orientation{1.0f, 0.0f, 0.0f, 0.0f};  // identity quaternion
   
-  float yaw = -90.0f; 
-  float pitch = 0.0f; 
   float moveSpeed = 3.0f; 
   float mouseSensitivity = 0.1f; 
 
@@ -90,22 +93,23 @@ struct Camera {
       return getProj() * getView();
   }
 
-  // Rebuild 'front' from yaw/pitch (in degrees).
+  // using quaternions to update vectors
   void updateVectors() {
-      const float cy = cos(glm::radians(yaw));
-      const float sy = sin(glm::radians(yaw));
-      const float cp = cos(glm::radians(pitch));
-      const float sp = sin(glm::radians(pitch));
-      front = glm::normalize(glm::vec3(cy * cp, sp, sy * cp) * glm::vec3(1,1,-1)); // OpenGL -Z forward
-      // keep 'up' as world up (0,1,0); if you want roll, orthonormalize here.
+    front = glm::normalize(orientation * glm::vec3(0, 0, -1));
+    up    = glm::normalize(orientation * glm::vec3(0, 1,  0));
+    right = glm::normalize(orientation * glm::vec3(1, 0,  0));
   }
 
   // Mouse delta in pixels (dx, dy); positive dy means cursor moved up.
   void processMouse(float dx, float dy) {
-      yaw   += dx * mouseSensitivity;
-      pitch -= dy * mouseSensitivity;          // invert to feel natural
-      pitch  = glm::clamp(pitch, -90.0f, 90.0f);
-      updateVectors();
+    const float yawRad   = glm::radians(-dx * mouseSensitivity);
+    const float pitchRad = glm::radians(-dy * mouseSensitivity);
+
+    glm::quat qYaw   = glm::angleAxis(yawRad,   glm::vec3(0, 1, 0));  // world up
+    glm::quat qPitch = glm::angleAxis(pitchRad, right);               // local right
+
+    orientation = glm::normalize(qYaw * qPitch * orientation);
+    updateVectors();
   }
 
   // Keyboard intent: forward/back/left/right
@@ -117,5 +121,5 @@ struct Camera {
       if (left) position -= rightVec * v;
       if (right)position += rightVec * v;
   }
-
 };
+

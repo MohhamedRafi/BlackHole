@@ -10,7 +10,7 @@ struct ShaderLibrary {
   void shutdown(); 
 
   const ShaderProgram& get_flat_color();
-
+  const ShaderProgram& get_raymarch();
 
   const ShaderProgram& get_from_files(const std::string& name, const std::string& vs_rel, const std::string& fs_rel);
 };

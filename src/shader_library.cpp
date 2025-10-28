@@ -32,6 +32,18 @@ const ShaderProgram& ShaderLibrary::get_from_files(const std::string& name, cons
    return ins->second;
 }
 
+const ShaderProgram& ShaderLibrary::get_raymarch() {
+    auto it = progs.find("raymarch");
+    if (it != progs.end()) return it->second;
+
+    {
+        const ShaderProgram& rp = get_from_files("raymarch", "shaders/raymarch.vert", "shaders/raymarch.frag"); 
+        if (rp.id) return rp;
+    }
+
+    return ShaderProgram();
+}
+
 /* Flat Color Example */
 const ShaderProgram& ShaderLibrary::get_flat_color() {
     auto it = progs.find("flat");

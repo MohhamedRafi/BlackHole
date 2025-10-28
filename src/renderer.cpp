@@ -94,11 +94,42 @@ bool Renderer::init_cube(ShaderLibrary& lib) {
     return true;
 }
 
+static const float FS_TRI[6] = {
+  -1.0f, -1.0f,
+   3.0f, -1.0f,
+  -1.0f,  3.0f
+};
+
+bool Renderer::init_raymarch(ShaderLibrary& lib) {
+  rmProg = lib.get_raymarch().id;
+  if(!rmProg) return false;
+
+  // uniforms
+  uInvVPLoc  = glGetUniformLocation(rmProg, "uInvVP");
+  uTimeLoc   = glGetUniformLocation(rmProg, "uTime");
+  uResLoc    = glGetUniformLocation(rmProg, "uResolution");
+  uCamPosLoc = glGetUniformLocation(rmProg, "uCameraPos");
+  
+  // full-screen triangle
+  glGenVertexArrays(1, &fsVAO);
+  glGenBuffers(1, &fsVBO);
+  glBindVertexArray(fsVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, fsVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(FS_TRI), FS_TRI, GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glBindVertexArray(0);
+  return true;
+
+}
+
 
 void Renderer::shutdown() {
   if (vbo) { glDeleteBuffers(1, &vbo); vbo = 0;} 
   if (ebo) { glDeleteBuffers(1, &ebo); ebo = 0;}
   if (vao) { glDeleteVertexArrays(1, &vao); vao = 0;} 
+  if (fsVBO) { glDeleteBuffers(1, &fsVBO); fsVBO = 0; }
+  if (fsVAO) { glDeleteVertexArrays(1, &fsVAO); fsVAO = 0; }
 }
 
 void Renderer::draw(float angle_radians, const glm::mat4& VP) {
@@ -116,4 +147,19 @@ void Renderer::draw(float angle_radians, const glm::mat4& VP) {
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
     glUseProgram(0);
+}
+
+void Renderer::draw_raymarch(double time_sec, const glm::mat4& VP, const glm::vec3& camPos, int width, int height) {
+  if (!rmProg || !fsVAO) return;
+  glUseProgram(rmProg);
+  // Send inverse VP for ray reconstruction
+  glm::mat4 invVP = glm::inverse(VP);
+  if (uInvVPLoc >= 0) glUniformMatrix4fv(uInvVPLoc, 1, GL_FALSE, glm::value_ptr(invVP));
+  if (uTimeLoc  >= 0) glUniform1f(uTimeLoc,  (float)time_sec);
+  if (uResLoc   >= 0) glUniform2f(uResLoc,   (float)width, (float)height);
+  if (uCamPosLoc>= 0) glUniform3fv(uCamPosLoc, 1, glm::value_ptr(camPos));
+  glBindVertexArray(fsVAO);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+  glBindVertexArray(0);
+  glUseProgram(0);
 }

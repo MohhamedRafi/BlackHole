@@ -83,11 +83,16 @@ bool Engine::on_enter(EngineState s) {
       //   return false; 
       // }
 
-      if(!renderer.init_cube(shaders)) {
+      // if(!renderer.init_cube(shaders)) {
+      //   std::cout << "Renderer init shaders failed!\n"; 
+      //   return false;
+      // }
+      
+      if (!renderer.init_raymarch(shaders)) {
         std::cout << "Renderer init shaders failed!\n"; 
         return false;
       }
-      
+
       camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
       camera.updateVectors();
 
@@ -225,7 +230,9 @@ void Engine::render() {
 
   if(state == EngineState::Running) {
     camera.aspect = static_cast<float> (width) / static_cast<float> (height);
-    renderer.draw(angle, camera.getViewProj());
+    // renderer.draw(angle, camera.getViewProj());
+
+    renderer.draw_raymarch(time_now, camera.getViewProj(), camera.position, width, height);
   }
 
   glfwSwapBuffers(window);
