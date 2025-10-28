@@ -100,6 +100,7 @@ static const float FS_TRI[6] = {
   -1.0f,  3.0f
 };
 
+
 bool Renderer::init_raymarch(ShaderLibrary& lib) {
   rmProg = lib.get_raymarch().id;
   if(!rmProg) return false;
@@ -148,6 +149,7 @@ void Renderer::draw(float angle_radians, const glm::mat4& VP) {
     glBindVertexArray(0);
     glUseProgram(0);
 }
+
 
 void Renderer::draw_raymarch(double time_sec, const glm::mat4& VP, const glm::vec3& camPos, int width, int height) {
   if (!rmProg || !fsVAO) return;

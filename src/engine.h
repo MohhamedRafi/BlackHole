@@ -23,7 +23,7 @@ enum class EngineState : uint8_t {
 
 struct Engine {
   bool running = true; 
-  int width = 1280; int height = 720;
+  int width = 800; int height = 600;
 
   EngineState state = EngineState::Boot;
   GLFWwindow* window = nullptr;
@@ -40,7 +40,7 @@ struct Engine {
 
 
   double time_now = 0.0, time_prev = 0.0, accumulator = 0.0;
-  static constexpr double DT = 1.0 / 60.0;
+  static constexpr double DT = 1.0 / 120;
 
   float angle = 0.0f; 
   float angular_velocity = 1.0f; 
