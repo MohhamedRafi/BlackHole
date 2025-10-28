@@ -104,7 +104,7 @@ struct Camera {
   void processMouse(float dx, float dy) {
       yaw   += dx * mouseSensitivity;
       pitch -= dy * mouseSensitivity;          // invert to feel natural
-      pitch  = glm::clamp(pitch, -89.0f, 89.0f);
+      pitch  = glm::clamp(pitch, -90.0f, 90.0f);
       updateVectors();
   }
 

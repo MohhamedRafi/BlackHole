@@ -6,9 +6,11 @@
 #include "shader_library.h" 
 
 struct Renderer {
-  GLuint prog = 0, vao = 0, vbo = 0;
+  GLuint prog = 0, vao = 0, vbo = 0, ebo = 0;;
 
   bool init_triangle(ShaderLibrary& lib);
+  bool init_cube(ShaderLibrary& lib);
+
 
   int uTransformLoc = -1;                
 

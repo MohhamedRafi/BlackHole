@@ -40,7 +40,36 @@ bool Engine::on_enter(EngineState s) {
           return false;
       }
 
-      glViewport(0, 0, width, height);
+      // --- Enable depth buffering so closer objects hide farther ones ---
+      // Without this, triangles are drawn in the order you submit them (painters algorithm style).
+      glEnable(GL_DEPTH_TEST);    
+      
+      // Specify the depth comparison function: 
+      // GL_LESS means "only draw this fragment if it is closer (has a smaller depth value)
+      // than the current value already in the depth buffer."
+      glDepthFunc(GL_LESS);
+
+      // --- Enable face culling for performance and realism ---
+      // This tells OpenGL to skip drawing triangles facing away from the camera
+      // (e.g., the inside faces of a cube).
+      glEnable(GL_CULL_FACE);
+
+      // Choose which faces to discard. Here we discard the back-facing triangles,
+      // meaning we only render the front faces that face toward the camera.
+      glCullFace(GL_BACK);
+
+      // Define what counts as a "front-facing" triangle. 
+      // GL_CCW = counter-clockwise winding order in clip-space.
+      // If you define your vertices clockwise instead, use GL_CW.
+      glFrontFace(GL_CCW);
+
+
+      glViewport(0, 0, width, height);  
+      // On HiDPI/Retina, framebuffer size != window size.
+      int fbw = 0, fbh = 0;
+      glfwGetFramebufferSize(window, &fbw, &fbh);
+      glViewport(0, 0, fbw, fbh);
+
       glfwShowWindow(window);
 
       return true;
@@ -49,11 +78,17 @@ bool Engine::on_enter(EngineState s) {
     case EngineState::Loading:   {
       std::cout << "[enter] Loading\n";
 
-      if(!renderer.init_triangle(shaders)) {
-        std::cout << "Renderer init triangle failed!\n"; 
-        return false; 
+      // if(!renderer.init_triangle(shaders)) {
+      //   std::cout << "Renderer init triangle failed!\n"; 
+      //   return false; 
+      // }
+
+      if(!renderer.init_cube(shaders)) {
+        std::cout << "Renderer init shaders failed!\n"; 
+        return false;
       }
       
+      camera.position = glm::vec3(0.0f, 0.0f, 3.0f);
       camera.updateVectors();
 
       return true;
@@ -133,6 +168,12 @@ void Engine::setup_input_callbacks() {
     const float dy = static_cast<float>(y - E->lastMouseY);
     E->lastMouseX = x; E->lastMouseY = y; 
 
+    // w,h are FRAMEBUFFER (pixels). Keep E->width/height as window points:
+    int winW=0, winH=0;
+    glfwGetWindowSize(win, &winW, &winH);
+    E->width = winW; 
+    E->height = winH;
+
     E->camera.processMouse(dx, dy);
 
   });
@@ -180,7 +221,7 @@ void Engine::update_variable(double dt) {
 void Engine::render() {
   if(!window) return; 
   glClearColor(0.1f, 0.12f, 0.2f, 1.0f); 
-  glClear(GL_COLOR_BUFFER_BIT); 
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
   if(state == EngineState::Running) {
     camera.aspect = static_cast<float> (width) / static_cast<float> (height);
