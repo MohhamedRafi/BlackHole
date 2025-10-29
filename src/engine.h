@@ -23,7 +23,7 @@ enum class EngineState : uint8_t {
 
 struct Engine {
   bool running = true; 
-  int width = 800; int height = 600;
+  int width = 400; int height = 400;
 
   EngineState state = EngineState::Boot;
   GLFWwindow* window = nullptr;

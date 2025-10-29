@@ -8,19 +8,20 @@ uniform float uTime;
 uniform vec3 uCameraPos;
 
 // ==================== Physical params (scene units, c=1) ====================
-const float RS         = 0.8;             // Schwarzschild radius
-const float HZN_ISO    = RS * 0.25;       // event horizon in isotropic radius: ρ_h = RS/4
-const float R_DISK_IN  = 100 * RS;
-const float R_DISK_OUT = 1 * RS;
+const float RS         = 0.8;              // Schwarzschild radius
+const float HZN_ISO    = RS * 0.25;        // event horizon in isotropic coords: ρ_h = RS/4
+
+// Accretion disk radial extent (physical Schwarzschild radii)
+const float R_DISK_IN  = 0.9 * RS;         // inner edge (closer -> hotter/brighter)
+const float R_DISK_OUT = 6.0 * RS;        // outer edge (larger -> wider disk)
 
 // Integrator controls
-const int   N_STEPS    = 1;     // RK4 steps
-const float LAMBDA_MAX = 60.0;    // affine "time" cap
-const float H_BASE     = 0.06;    // base step (smaller near the hole)
+const int   N_STEPS    = 1200;             // RK4 steps (>=900 recommended)
+const float LAMBDA_MAX = 120.0;            // affine "time" cap
+const float H_BASE     = 0.04;             // base step (smaller near the hole)
 
-// --- add after the other consts ---
-const float B_CRIT    = 2.598076211f * RS;     // 3*sqrt(3)/2 * RS
-const float R_PH_ISO  = 0.9330127019f * RS;    // photon-sphere radius in isotropic coords
+// Photon-sphere helper (for robust capture)
+const float R_PH_ISO   = 0.9330127019f * RS; // photon-sphere in isotropic radius
 
 // ==================== Utility / background ====================
 float hash31(vec3 p) {
@@ -39,7 +40,7 @@ vec3 starBackground(vec3 rd) {
         s += smoothstep(0.995, 1.0, h) * (1.0 + 3.0*float(i));
         d *= 1.7;
     }
-    vec3 base = vec3(0.03, 0.04, 0.06);
+    vec3 base = vec3(0.04, 0.05, 0.08); // slightly brighter background to showcase lensing
     return base + s * vec3(0.9, 0.9, 1.0);
 }
 
@@ -72,19 +73,16 @@ ABVals metricAB(float rho) {
     float s = RS / (4.0 * r);
     float A = (1.0 - s) / (1.0 + s);
     float B = (1.0 + s) * (1.0 + s);
-    // derivatives w.r.t. ρ
     // s' = -s/ρ
     float dA = (2.0 * s) / ((1.0 + s)*(1.0 + s) * r);   // dA/dρ
-    float dB = -2.0 * s * (1.0 + s) / r;                 // dB/dρ
+    float dB = -2.0 * s * (1.0 + s) / r;                // dB/dρ
     ABVals v; v.A=A; v.B=B; v.dA=dA; v.dB=dB; return v;
 }
 
 struct RHS { vec3 dx; vec3 dp; };
 
-// Right-hand side of geodesic ODEs (affine parameter λ)
 RHS rhs(vec3 x, vec3 p) {
     float rho = length(x);
-
     ABVals m = metricAB(rho);
     float invB2 = 1.0 / (m.B * m.B);
     vec3 dx = p * invB2;
@@ -160,34 +158,58 @@ Sample traceGeodesic(vec3 ro_world, vec3 rd_world)
 
     for (int i=0; i<N_STEPS; ++i) {
         float rho = length(x);
+
+        // absorb at/near photon sphere when moving inward
         if (rho < R_PH_ISO && dot(x, p) < 0.0) {
             Sample s; s.absorbed = true; s.col = vec3(0.0); 
-            return s; // inside photon sphere moving inward -> captured
+            return s;
         }
 
         // absorb at horizon (ρ <= RS/4)
         if (rho <= HZN_ISO) {
-            Sample s; s.absorbed = true; s.col = vec3(0.0); return s;
-        }
-
-        // thin accretion disk in y≈0 plane, emissive + GR + Doppler beaming
-        if (abs(x.y) < 0.03) {
-            float r_iso = length(x);
-            float r_phys = r_iso * metricAB(max(r_iso,1e-6)).B;
-            if (r_phys > R_DISK_IN && r_phys < R_DISK_OUT) {
-                float ang = atan(x.z, x.x);
-                vec3 vphi = normalize(vec3(-sin(ang), 0.0, cos(ang))) * v_orbit(r_iso);
-                float emi  = 4.0 * pow(clamp(R_DISK_IN / r_phys, 0.0, 1.0), 2.0);
-                float tw   = hash31(floor(x * 4.0)) * 0.2 + 0.9;
-                vec3 disk  = vec3(1.6, 0.95, 0.55) * emi * tw;
-                float g    = grav_redshift(r_iso);         // gravitational redshift
-                float D    = doppler(vphi, normalize(p));  // Doppler/beaming toward ray dir
-                accum += disk * g * D * 0.02;
-            }
+            Sample s; s.absorbed = true; s.col = vec3(0.0); 
+            return s;
         }
 
         // adaptive affine step: smaller near the hole
         float h = H_BASE * mix(0.15, 1.0, smoothstep(RS*0.6, 6.0*RS, rho));
+
+        // ----- Coronal gas (faint volumetric emission) -----
+        {
+            float r_iso  = max(length(x), 1e-6);
+            float r_phys = r_iso * metricAB(r_iso).B;
+
+            const float Hscale = 0.25 * RS;           // vertical thickness of corona
+            const float rMin   = 0.9  * RS;
+            const float rMax   = 15.0 * RS;
+            const float alpha  = 1.4;                  // radial falloff exponent
+
+            float inRange = step(rMin, r_phys) * (1.0 - step(rMax, r_phys));
+            float vz = exp(-abs(x.y) / Hscale);                   // vertical decay
+            float vr = pow(max(r_phys / RS, 1.0), -alpha);        // radial decay
+            float tw = 0.85 + 0.3 * hash31(floor(x * 3.5));       // mild turbulence
+            float g  = grav_redshift(r_iso);
+
+            vec3 coronaColor = vec3(1.2, 0.85, 0.55);
+            accum += coronaColor * (vz * vr * inRange * tw) * g * (0.015 * h);
+        }
+
+        // ----- Thin accretion disk (y ≈ 0 plane), emissive + GR + Doppler beaming -----
+        if (abs(x.y) < 0.01) { // thickened gas layer
+            float r_iso = max(length(x), 1e-6);
+            float r_phys = r_iso * metricAB(r_iso).B;
+            if (r_phys > R_DISK_IN && r_phys < R_DISK_OUT) {
+                float ang  = atan(x.z, x.x);
+                vec3  vphi = normalize(vec3(-sin(ang), 0.0, cos(ang))) * v_orbit(r_iso);
+                float emi  = 4.0 * pow(clamp(R_DISK_IN / r_phys, 0.0, 1.0), 2.0);
+                float tw   = hash31(floor(x * 4.0)) * 0.2 + 0.9;
+                vec3  disk = vec3(2.0, 1.0, 0.6) * emi * tw;     // hotter orange-white
+                float g    = grav_redshift(r_iso);               
+                float D    = pow(doppler(vphi, normalize(p)), 1.3); // slightly exaggerated
+                accum += disk * g * D * 0.03; // denser/more emissive disk
+            }
+        }
+
         rk4(x, p, h);
 
         lambda += h;
@@ -200,7 +222,7 @@ Sample traceGeodesic(vec3 ro_world, vec3 rd_world)
 
     Sample s; 
     s.absorbed = false; 
-    s.col = accum + lensedSky;    // disk emission + GR-lensed background
+    s.col = accum + lensedSky;    // disk + corona emission + GR-lensed background
     return s;
 }
 
@@ -210,14 +232,9 @@ void main()
     vec3 ro = uCameraPos;
     vec3 rd = rayDirection(vNDC);
 
-    float b = length(cross(rd, normalize(-ro))) * length(ro);
-    if (b < B_CRIT) { FragColor = vec4(0.0); return; }
-
-
     Sample s = traceGeodesic(ro, rd);
 
     if (s.absorbed) { FragColor = vec4(0.0); return; }
 
-    // Output the physically bent background + disk emission
     FragColor = vec4(s.col, 1.0);
 }

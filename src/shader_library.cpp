@@ -37,7 +37,7 @@ const ShaderProgram& ShaderLibrary::get_raymarch() {
     if (it != progs.end()) return it->second;
 
     {
-        const ShaderProgram& rp = get_from_files("raymarch", "shaders/raymarch.vert", "shaders/blackhole.frag"); 
+        const ShaderProgram& rp = get_from_files("raymarch", "shaders/raymarch.vert", "shaders/animated_blackhole.frag"); 
         if (rp.id) return rp;
     }
 
